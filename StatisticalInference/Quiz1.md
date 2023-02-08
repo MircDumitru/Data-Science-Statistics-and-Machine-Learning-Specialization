@@ -28,31 +28,6 @@ mother has contracted influenza?
 
 ## Answer 1
 
-$$
-\begin{align}
-\text{the probability that at least one of the parents has contracted the disease is 17\\%: }&
-\quad P(M \cup F) = 0.17 
-\\\\
-\text{the probability that the father has contracted influenza is 12\\%: }&
-\quad P(F) = 0.12; 
-\\\\
-\text{the probability that both the mother and father have contracted the disease is 6\\%: }&
-\quad P(M \cap F) = 0.06
-\end{align}
-$$
-
-$$
-\begin{align}
-P(M \cup F) = P(M) + P(F) - P(M \cap F)
-\Rightarrow
-P(M) = P(M \cup F) - P(F) + P(M \cap F)
-=
-0.17 - 0.12 + 0.06
-=
-0.11
-\end{align}
-$$
-
 ## Question 2
 
 A random variable, *X* is uniform, a box from 0 to 1 of height 1. (So
@@ -62,17 +37,7 @@ that its density is *f*(*x*) = 1 for 0 ≤ *x* ≤ 1). What is its
 ## Answer 2
 
 The Uniform distribution with parameters 0 and 1 is given by
-$$
-\begin{align}
-\mathcal{U}\left(x \mid 0, 1\right)
-=
-\begin{cases}
-1, 0 &lt;= x &lt;= 1
-\\\\
-0, \text{otherwise}
-\end{cases}
-\end{align}
-$$
+
 The *a* quantile is obtained via `qunif(a, 0, 1)` (where 0 and 1
 correspond to the Uniform parameters that are considered in this
 question):
@@ -108,23 +73,6 @@ expected total earnings is 0. The game would then be called “fair”.
 ## Answer 3
 
 The expected value is
-$$
-\mathbb{E}\left\[ \text{Player 1} \right\]
-=
-(-x) p + y (1-p)
-=
-0 
-\Rightarrow
-\frac{p}{(1-p)} = \frac{y}{x} 
-\\\\ 
-\mathbb{E}\left\[ \text{Player 2} \right\]
-=
-x p + (-y) (1-p)
-=
-0 
-\Rightarrow
- \frac{p}{(1-p)} = \frac{y}{x}  
-$$
 
 ## Question 4
 

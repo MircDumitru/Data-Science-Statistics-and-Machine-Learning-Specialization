@@ -46,9 +46,11 @@
             id="toc-negative-predictive-value">Negative Predictive Value</a>
         -   <a href="#prevalence-of-disease"
             id="toc-prevalence-of-disease">Prevalence of disease</a>
+        -   <a href="#example-2" id="toc-example-2">Example</a>
         -   <a href="#likelihood-ratios" id="toc-likelihood-ratios">Likelihood
             ratios</a>
     -   <a href="#independence" id="toc-independence">Independence</a>
+        -   <a href="#example-3" id="toc-example-3">Example</a>
 -   <a href="#module-4-expected-values"
     id="toc-module-4-expected-values">Module 4: Expected Values</a>
     -   <a href="#the-population-mean" id="toc-the-population-mean">The
@@ -56,6 +58,8 @@
     -   <a href="#the-sample-mean" id="toc-the-sample-mean">The sample mean</a>
         -   <a href="#example-population-mean"
             id="toc-example-population-mean">Example population mean</a>
+    -   <a href="#continous-random-variables"
+        id="toc-continous-random-variables">Continous Random Variables</a>
     -   <a href="#facts-about-expected-values"
         id="toc-facts-about-expected-values">Facts About Expected Values</a>
         -   <a href="#simulation-experiment"
@@ -234,33 +238,8 @@ distribution models a coin flip. The notations used are:
 The pmf of a Bernoulli distribution with the parameter *θ* = 1/2 is
 given by
 
-$$
-\begin{equation}
-p(\textbf{X} = x) 
-=
-\left(\frac{1}{2}\right)^{x}
-\left(\frac{1}{2}\right)^{1-x}
-,
-\quad
-x = 0, 1
-.
-\end{equation}
-$$
-
 which corresponds to the probabilities *p*(**X**=1) = 1/2 and
 *p*(**X**=0) = 1/2:
-
-$$
-\begin{equation}
-p(\textbf{X} = 0) = \left(\frac{1}{2}\right)^{0}
-\left(\frac{1}{2}\right)^{1} = \frac{1}{2}
-,
-\quad
-p(\textbf{X} = 1) = \left(\frac{1}{2}\right)^{1}
-\left(\frac{1}{2}\right)^{0} = \frac{1}{2}
-.
-\end{equation}
-$$
 
 The Bernoulli probability mass function considered above corresponds to
 the case where the parameter is *θ* = 1/2, which models the **fair**
@@ -268,21 +247,8 @@ coins flips. More general, for a coin that is not necesarily fair, with
 the probability of tails being *θ* and the probability of heads being
 1 − *θ*, the probability mass function writes
 
-*p*(**X**=*x*) = *θ*<sup>*x*</sup>*θ*<sup>1 − *x*</sup>,  *x* = 0, 1.
 which corresponds to the probabilities *p*(**X**=1) = *θ* and
 *p*(**X**=0) = 1 − *θ*:
-
-$$
-\begin{equation}
-p(\textbf{X} = 0) = \left(\frac{1}{2}\right)^{0}
-\left(\frac{1}{2}\right)^{1} = \frac{1}{2}
-,
-\quad
-p(\textbf{X} = 1) = \left(\frac{1}{2}\right)^{1}
-\left(\frac{1}{2}\right)^{0} = \frac{1}{2}
-.
-\end{equation}
-$$
 
 The Bernoilli distribution is very useful for modelling the prevalence
 of something, e.g. for modelling the prevalence of the hypertension, we
@@ -305,21 +271,6 @@ For example, if we consider that intelligence quotients are **normally**
 (𝒩) distributed with a **mean** of 100 and a **standard deviation** of
 15, that implies that the population follows a specific bell shaped
 looking curve, given by the probability density function
-
-$$
-\begin{equation}
-f(x)
-=
-\mathcal{N}
-\left(x \mid 100, 15 \right)
-=
-\frac{1}{15\sqrt{2\pi}}
-\exp{
--\frac{1}{2}
-\left(\frac{x - 100}{15}\right)^2
-}
-\end{equation}
-$$
 
 which has the following graphics:
 
@@ -353,17 +304,6 @@ line is zero.
 
 We consider the following density:
 
-$$
-\begin{equation}
-f(x)
-=
-\begin{cases}
-2x, \quad \text{for}, 0 &lt; x &lt; 1
-\\\\
-0, \quad\\;\\; \text{otherwise}
-\end{cases}
-\end{equation}
-$$
 which is a triangle shaped distribution and might correspond to the
 proportion of help calls that get addressed in a random day by a help
 line.
@@ -394,27 +334,11 @@ addressed in a random day is given by the area
 
 ![](Notes1_files/figure-markdown_strict/unnamed-chunk-3-1.png)
 
-*p* = ∫<sub>0.2</sub><sup>0.6</sup>*f*(*x*) = ∫<sub>0.2</sub><sup>0.6</sup>2*x* = .*x*<sup>2</sup>|<sub>0.2</sub><sup>0.6</sup> = 0.36 − 0.04 = 0.32
-
 In particular, the density considered above can be expressed via a
 classical density, with support *x* ∈ (0,1) i.e. a Beta distribution
 with the shape paramters *α* = 2 and *β* = 1. In general, the Beta
 distribution is given by
 
-$$
-\begin{equation}
-\mathcal{B}\left( x \mid \alpha, \beta \right)
-=
-\frac
-{\Gamma(\alpha + \beta)}
-{\Gamma(\alpha)\Gamma(\beta)}
-x^{\alpha -1}
-x^{\beta -1},
-\quad
-x \in \left(0, 1\right)
-.
-\end{equation}
-$$
 which for *α* = 2 and *β* = 1 corresponds to 2*x*. Therefore, the
 probabilty computed above can be easily computed in `R` using the
 cumulative distribution function:
@@ -428,7 +352,7 @@ cumulative distribution function:
 The **cumulative distribution function** (CDF) of a random variable *X*,
 returns the probability that the random variable is less than or equal
 to the value *x*
-*F*(*x*) = *P*(*X*&lt;*x*).
+
 Different from the case of the probability mass function and the
 probabilty density function, which are defined depending on the nature
 of the random variable (discrete or continuous, respectively) the
@@ -440,7 +364,6 @@ discrete and continuous variables.
 The **survival function** of a random variable *X* is defined as the
 probability that the random variable is greater than the value *x*
 
-*F*(*x*) = *P*(*X*&gt;*x*).
 Notice that the survival function can be expressed via the CDF
 *S*(*x*) = 1 − *F*(*x*).
 
@@ -448,7 +371,6 @@ Notice that the survival function can be expressed via the CDF
 
 The *α*<sup>th</sup> **quantile** of a distribution with distribution
 *F* is the point *x*<sub>*α*</sub> so that
-*F*(*x*<sub>*α*</sub>) = *α*.
 
 -   A **percentile** is simply a quantile with *α* expressed as a
     percent.
@@ -470,13 +392,6 @@ Let *B* be an event so that *P*(*B*) &gt; 0.
 The conditional probability of an event *A* given that an event *B* has
 occured is given by
 
-$$
-P(A \mid B) = 
-\frac
-{P(A \cap B)}
-{P(B)}
-.
-$$
 If *A* and *B* are statistically independent, then
 *P*(*A*∣*B*) = *P*(*A*), i.e. the new information that the event *B* has
 occured gives no information about the probabilty law governing the
@@ -486,11 +401,6 @@ event *A*.
 
 Allows to reverse the role of the conditioning set and the set that we
 want the probability of.
-
-$$
-P(B \mid A) = \frac{P(A \mid B)P(B)}{P(A \mid B) P(B) + P(A \mid B^{c})P(B^{c})}
-.
-$$
 
 ## Diagnostic Test (Sensitivity & Specificity)
 
@@ -506,7 +416,6 @@ person either does or does not have the disease, respectively.
 The **sensitivity** is the probability that the test is positive (+)
 given that the subject does have the disease (*D*). Sensitivity is a
 marker of a good test. We want sensitivity to be high.
-Sensitivity = *P*(+∣*D*)
 
 ### Specificity
 
@@ -515,15 +424,11 @@ given that the subject does not have the disease (*D*<sup>*c*</sup>).
 Specificity is a marker of a good test. We want specifificity to be high
 as well.
 
-Specificity = *P*(−∣*D*<sup>*c*</sup>)
-
 ### Positive Predictive Value
 
 For a positive test for a patient, we are interested in the probability
 of the patient having the disease (*D*) given the positive test result
 (+). This probability is the **positive predictive value**:
-
-Positive predictive value = *P*(*D*∣+)
 
 ### Negative Predictive Value
 
@@ -531,16 +436,13 @@ For a negative test for a patient, we are interested in the probability
 of the patient not having the disease (*D*) given the negative test
 result (+). This probability is the **negative predictive value**:
 
-Negative predictive value = *P*(*D*<sup>*c*</sup>∣−)
-
 ### Prevalence of disease
 
 In the absence of a test, we are interested in the probability of a
 patient having the disease (*D*). This (marginal) probability is the
 **prevalence of disease**:
 
-Prevalence of disease = *P*(*D*)
-\### Example
+### Example
 
 A study comparing the efficacy of HIV test reports on an experiment
 which concluded that the antibody tests have a sensitivity of 99.7 and a
@@ -548,62 +450,13 @@ specificity of 98.5 (these are made up numbers). Suppose the prevalence
 of HIV is 0.1%. What is the associated positive predictive value (PPV)?
 
 With the Bayes’ formula:
-$$
-\begin{equation}
-\text{PPV} 
-= 
-P(D \mid +)
-=
-\frac
-{P(+ \mid D)P(D)}
-{P(+ \mid D)P(D) + P(+ \mid D^{c})P(D^{c})}
-.
-\end{equation}
-$$
 
 But *P*(+∣*D*<sup>*c*</sup>) can be expressed via the specificity
 *P*(−∣*D*<sup>*c*</sup>), via the law of total probability:
 
-*P*(*D*<sup>*c*</sup>) = *P*(+,*D*<sup>*c*</sup>) + *P*(−,*D*<sup>*c*</sup>) = *P*(+∣*D*<sup>*c*</sup>)*P*(*D*<sup>*c*</sup>) + *P*(−∣*D*<sup>*c*</sup>)*P*(*D*<sup>*c*</sup>)
-
 So
 
-1 = *P*(+∣*D*<sup>*c*</sup>) + *P*(−∣*D*<sup>*c*</sup>) ⇒ *P*(+∣*D*<sup>*c*</sup>) = 1 − *P*(−∣*D*<sup>*c*</sup>).
-
 Plugging back in the Bayes’ formula:
-
-$$
-\begin{align}
-\text{PPV} 
-&
-=
-P(D \mid +)
-\\\\
-&
-=
-\frac
-{P(+ \mid D)P(D)}
-{P(+ \mid D)P(D) + \left\[ 1 - P(- \mid D^{c}) \right\] P(D^{c})}
-\\\\
-&
-=
-\frac
-{\text{Sensitivity} \times \text{Prevalence}}
-{\text{Sensitivity} \times \text{Prevalence}
-+ 
-\left( 1 - \text{Specificity} \right) \left(1 -  \text{Prevalence} \right)}
-\\\\
-&
-=
-\frac
-{0.997 \times 0.001}
-{0.997 \times 0.001
-+ 
-0.015 \times 0.999}
-=
-0.06238268
-\end{align}
-$$
 
     (0.997 * 0.001) / (0.997 * 0.001 + 0.015 * 0.999)
 
@@ -634,40 +487,6 @@ probability of not having the disease given a positive test can be
 computed, via the Bayes’ rule, also using just the sensitivity,
 specificity and the prevalence.
 
-$$
-\begin{align}
-P(D \mid +)
-&
-=
-\frac
-{P(+ \mid D)P(D)}
-{P(+ \mid D)P(D) + P(+ \mid D^{c})P(D^{c})}
-&
-\\\\
-P(D^{c} \mid +)
-&
-=
-\frac
-{P(+ \mid D^{c})P(D^{c})}
-{P(+ \mid D)P(D) + P(+ \mid D^{c})P(D^{c})}
-\end{align}
-$$
-The ratio between the two gives
-
-$$
-\begin{align}
-\frac{P(D \mid +)}
-{P(D^{c} \mid +)}
-=
-\frac
-{P(+ \mid D)}
-{P(+ \mid D^{c})}
-\frac
-{P(D)}
-{P(D^{c})}
-\end{align}
-$$
-
 -   The left term of the equality represents the **odds** of disease
     given a positive test result, i.e. the **post-test odds of disease**
 
@@ -680,29 +499,9 @@ $$
 
 The equality above can then be interpreted as
 
-$$
-\begin{align}
-\text{post-test odds of disease}
-=
-\text{DLR}\_{+}
-\times
-\text{pre-test odds of disease}
-\end{align}
-$$
 For the HIV example, the corresponding diagnostic likelihood ratio plus
 is
-$$
-\begin{align}
-\text{DLR}\_{+}
-=
-\frac{\text{Sensitivity}}{1 - \text{Specificity}}
-=
-\frac{0.997}{1 - 0.985}
-\approx
-66
-.
-\end{align}
-$$
+
 Via the formula introduced before, for this HIV example, no matter what
 the pre-test odds are, we multiply them times 66 to obtain the post-test
 odds, i.e. the hypothesis of disease is 66 times more supported by the
@@ -712,18 +511,6 @@ though 66 times larger.
 
 For the HIV example, the corresponding diagnostic likelihood ratio minus
 is
-$$
-\begin{align}
-\text{DLR}\_{-}
-=
-\frac{1 - \text{Sensitivity}}{\text{Specificity}}
-=
-\frac{1-0.997}{0.985}
-\approx
-0.003
-.
-\end{align}
-$$
 
 In this case, the post-test odds of disease in the light of a negative
 test result is now 0.3% that of the pre-test odds of the disease. The
@@ -733,39 +520,12 @@ the absence of disease given the negative test result.
 ## Independence
 
 The event *A* is independent of event *B* if
-$$
-\begin{align}
-P(A \mid B) 
-=
-P(A)
-,\quad
-\text{where }
-P(B) &gt; 0.
-\end{align}
-$$
+
 Equivalently, the event *A* is independent of event *B* if
 
-$$
-\begin{align}
-P(A, B) 
-=
-P(A)
-P(B)
-.
-\end{align}
-$$
-\### Example
+### Example
 
 What is the probability of two consecutive heads on a fair coin?
-$$
-\begin{align}
-A = \\{\text{Head on flip 1} \\}; & \quad P(A) = \frac{1}{2}
-\\\\
-B = \\{\text{Head on flip 2} \\}; & \quad P(B) = \frac{1}{2}
-\\\\
-A,B = \\{ \text{Head on flip 1 and 2} \\}; & \quad P(A,B) = P(A) P(B) = \frac{1}{4}
-\end{align}
-$$
 
 # Module 4: Expected Values
 
@@ -781,14 +541,7 @@ The **expected value** or **mean** of a r.v. is the center of its
 distribution.
 
 For a discrete r.v. *X* with pmf *p*(*x*), the expected value is:
-$$
-\begin{align}
-\mathbb{E} \left\[ X \right\]
-=
-\sum\_{x} x p(x)
-.
-\end{align}
-$$
+
 𝔼\[*X*\] represents the center of mass of a collection of locations and
 weights {*x*, *p*(*x*)}.
 
@@ -796,12 +549,6 @@ weights {*x*, *p*(*x*)}.
 
 The sample mean estimates the population mean. The center of mass of the
 **data** is the empirical mean
-
-$$
-\begin{align}
-\bar{X} = \sum\_{i}^{N} x\_{i} \\, p(x\_{i})
-\end{align}
-$$
 
     # library(manipulate)
     # library(ggplot2)
@@ -826,89 +573,20 @@ $$
 Suppose a fair coin is flipped and *X* is declared 0 or 1 corresponding
 to a head or a tail, respectively. What is the expected value of X?
 
-$$
-\begin{align}
-\mathbb{E} \left\[ X \right\]
-=
-\sum\_{x} x p(x)
-=
-0 \times \frac{1}{2} + 1 \times \frac{1}{2} 
-=
-\frac{1}{2}
-\end{align}
-$$
-
 Suppose a biased coin is flipped and *X* is declared 0 or 1
 corresponding to a head or a tail, with probabilities *P*(*X*=1) = *p*
 and *P*(*X*=0) = (1−*p*). What is the expected value of X?
 
-$$
-\begin{align}
-\mathbb{E} \left\[ X \right\]
-=
-\sum\_{x} x p(x)
-=
-0 \times (1-p) + 1 \times p
-=
-p
-\end{align}
-$$
 Suppose that a die is rolled and *X* is the number face up. What is the
 expected value of *X*?
 
-$$
-\begin{align}
-\mathbb{E} \left\[ X \right\]
-=
-\sum\_{x} x p(x)
-=
-1 \times \frac{1}{6}
-+
-2 \times \frac{1}{6}
-+
-\ldots
-+
-6 \times \frac{1}{6}
-=
-3.5
-\end{align}
-$$
-\## Continous Random Variables
+## Continous Random Variables
 
 For a continuous r.v. *X* with pdf *f*(*x*), the expected value is:
-$$
-\begin{align}
-\mathbb{E} \left\[ X \right\]
-=
-\int x f(x) \mathrm{d} x
-.
-\end{align}
-$$
 
 Consider the uniform density,
 
-$$
-\begin{align}
-\mathcal{U}\left(x \mid 0, 1\right)
-=
-\begin{cases}
-1, 0 &lt;= x &lt;= 1
-\\\\
-0, \text{otherwise}
-\end{cases}
-\end{align}
-$$
 The expected value is
-
-$$
-\begin{align}
-\mathbb{E} \left\[ X \right\]
-=
-\int\_{0}^{1} x 
-=
-\frac{1}{2}
-\end{align}
-$$
 
 ## Facts About Expected Values
 
