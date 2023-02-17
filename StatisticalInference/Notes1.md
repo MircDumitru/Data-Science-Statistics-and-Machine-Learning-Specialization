@@ -1,5 +1,7 @@
 
 
+
+
 -   <a href="#module-1-introduction" id="toc-module-1-introduction">Module
     1: Introduction</a>
     -   <a href="#examples" id="toc-examples">Examples:</a>
@@ -487,6 +489,20 @@ probability of not having the disease given a positive test can be
 computed, via the Bayes’ rule, also using just the sensitivity,
 specificity and the prevalence.
 
+The ratio between the two gives
+
+    \begin{align}
+    \frac{P(D \mid +)}
+    {P(D^{c} \mid +)}
+    =
+    \frac
+    {P(+ \mid D)}
+    {P(+ \mid D^{c})}
+    \frac
+    {P(D)}
+    {P(D^{c})}
+    \end{align}
+
 -   The left term of the equality represents the **odds** of disease
     given a positive test result, i.e. the **post-test odds of disease**
 
@@ -608,3 +624,47 @@ The sample mean is <r>unbiased</r> because its distribution is centered
 at what it’s trying to estimate.
 
 ### Simulation Experiment
+
+    n <- 100000
+    set.seed(42)
+    x <- sample(1:6, n, replace = TRUE)
+
+    xMean2 <- tapply(x, rep(seq_along(x), each = 2, length.out = length(x)), mean)
+
+    xMean3 <- tapply(x, rep(seq_along(x), each = 3, length.out = length(x)), mean)
+
+    xMean4 <- tapply(x, rep(seq_along(x), each = 4, length.out = length(x)), mean)
+
+    par(mfrow = c(2, 2))
+    hist(x, breaks = seq(0.95, 6.05, 0.1))
+    hist(xMean2, breaks = seq(0.95, 6.05, 0.1))
+    hist(xMean3, breaks = seq(0.95, 6.05, 0.1))
+    hist(xMean4, breaks = seq(0.95, 6.05, 0.1))
+    mtext(expression(bold("Agerages of Die Rolling")),
+          side = 3,
+          line =  -1.5,
+          outer = TRUE)
+
+![](Notes1_files/figure-markdown_strict/unnamed-chunk-8-1.png)
+
+    n <- 100000
+    set.seed(42)
+    x <- rbinom(n = n, size = 1, prob = 1/2)
+
+    xMean10 <- tapply(x, rep(seq_along(x), each = 10, length.out = length(x)), mean)
+
+    xMean20 <- tapply(x, rep(seq_along(x), each = 20, length.out = length(x)), mean)
+
+    xMean30 <- tapply(x, rep(seq_along(x), each = 30, length.out = length(x)), mean)
+
+    par(mfrow = c(2, 2))
+    hist(x, breaks = seq(-0.05, 1.05, 0.1))
+    hist(xMean10, breaks = seq(-0.05, 1.05, 0.1))
+    hist(xMean20, breaks = seq(-0.05, 1.05, 0.1))
+    hist(xMean30, breaks = seq(-0.05, 1.05, 0.1))
+    mtext(expression(bold("Averages of Coin Flipping")),
+          side = 3,
+          line =  -1.5,
+          outer = TRUE)
+
+![](Notes1_files/figure-markdown_strict/unnamed-chunk-9-1.png)

@@ -1,16 +1,3 @@
-
-
--   <a href="#question-1" id="toc-question-1">Question 1</a>
--   <a href="#answer-1" id="toc-answer-1">Answer 1</a>
--   <a href="#question-2" id="toc-question-2">Question 2</a>
--   <a href="#answer-2" id="toc-answer-2">Answer 2</a>
--   <a href="#question-3" id="toc-question-3">Question 3</a>
--   <a href="#answer-3" id="toc-answer-3">Answer 3</a>
--   <a href="#question-4" id="toc-question-4">Question 4</a>
--   <a href="#answer-4" id="toc-answer-4">Answer 4</a>
--   <a href="#question-5" id="toc-question-5">Question 5</a>
--   <a href="#answer-5" id="toc-answer-5">Answer 5</a>
-
 <style>
 r { color: Red }
 o { color: Orange }
@@ -27,6 +14,31 @@ have contracted the disease is 6%. What is the probability that the
 mother has contracted influenza?
 
 ## Answer 1
+
+$$
+\begin{align}
+\text{the probability that at least one of the parents has contracted the disease is 17\\%: }&
+\quad P(M \cup F) = 0.17 
+\\\\
+\text{the probability that the father has contracted influenza is 12\\%: }&
+\quad P(F) = 0.12; 
+\\\\
+\text{the probability that both the mother and father have contracted the disease is 6\\%: }&
+\quad P(M \cap F) = 0.06
+\end{align}
+$$
+
+$$
+\begin{align}
+P(M \cup F) = P(M) + P(F) - P(M \cap F)
+\Rightarrow
+P(M) = P(M \cup F) - P(F) + P(M \cap F)
+=
+0.17 - 0.12 + 0.06
+=
+0.11
+\end{align}
+$$
 
 ## Question 2
 
