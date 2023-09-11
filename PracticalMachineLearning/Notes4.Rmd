@@ -1,0 +1,675 @@
+---
+title: "Regularized Regression and Combining Predictors"
+subtitle: |
+  | Practical Machine Learning: Week 4
+  | Coursera Data Science: Statistics & Machine Learning Specialization
+author: "Mircea Dumitru"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+header-includes:
+   - \usepackage{amsmath}
+   - \usepackage{bbm}
+   - \usepackage{eucal}
+output: 
+    html_document:
+        toc: true
+---
+\DeclareMathOperator{\sign}{sign}
+
+
+<style>
+r { color: Red }
+o { color: Orange }
+g { color: Green }
+</style>
+
+
+# Regularized Regression
+
+## Basic Idea
+
+1. Fit a regression model
+2. Penalize (or shrink) large coefficients
+
+**Pros: **
+
+* Can help with the bias/variance tradeoff
+* Can help with model selection
+
+**Cons: **
+
+* May be computionally demanding on large data sets
+* Does not perform as well as random forests or boosting
+
+
+## A motivating example
+
+Suppose a regression model with two covariates $X_1$ and $X_2$ is considered:
+
+$$
+Y
+=
+\beta_0
++
+\beta_1 X_1
++
+\beta_2 X_2
++
+\epsilon
+$$
+where $X_1$ and $X_2$ are nearly perfectly correlated (co-linear). You can approximate this model by:
+$$
+Y
+=
+\beta_0
++
+\left( \beta_1 + \beta_2 \right) X_1
++
+\epsilon
+$$
+The result is:
+
+* You will get a good estimate of $Y$.
+* The estimate of $Y$ will be biased.
+* We may reduce variance in the estimate.
+
+```{r, echo=TRUE}
+library(ElemStatLearn)
+data(prostate)
+str(prostate)
+```
+
+## Model selection approach: split samples
+
+*No method better when data/computation time permits it
+
+* Approach
+
+    1. Divide data into training/test/validation.
+    2. Treat validation as test data, train all competing models on the train data nad pick the best one on validation.
+    3. To appropriately asses performance on new data apply to test set.
+    4. You may re-split and reperfom steps 1-3.
+
+* Two common problems
+
+    * Limited data
+    * Computational complexity
+    
+## Decomposing expected prediction error
+
+Assume the test set formed by the observations $(x_i, y_i)$, $i = 1, \ldots, n$ and assume the linear model 
+
+$$
+y_i
+=
+f(x_i) 
++
+\epsilon_i,
+\quad
+i = 1, 2, \ldots, n,
+$$
+with the errors:
+
+* $\epsilon_i$ i.i.d, 
+* centered, i.e. $\mathbb{E} \left[ \epsilon_1 \right] = 0$,
+* with variance $\mathbb{V} \left[ \epsilon_1 \right] = \sigma^2$.
+
+For a (previously unseen) test observation, not used to train the statistical learning method, $(x_0, y_0)$ and an estimation of $f$, denoted $\widehat{f}$ and corresponding to the test set, the **expected test MSE** (**expected prediction error in the MSE sense**) is
+
+$$
+\mathbb{E} \left[ \left( y_0 - \widehat{f} (x_0) \right)^2 \right]
+,
+$$    
+where the expected value notation $\mathbb{E}$ is used accounting for the randomness of the function estimation $\widehat{f}$.
+
+The expected test MSE can be decomposed in:
+
+* the **irreducible error**: $\sigma^2$, 
+
+* the **bias**: $\mathbf{Bias} \left( \widehat{f}(x_0) \right) = f(x_0) - \mathbb{E} \left[ \widehat{f} (x_0) \right]$, corresponding to the error induced by the approximation of the real $f$ by the estimate $\widehat{f}$,
+
+* the **variance**: $\mathbb{V} \left[ \widehat{f} (x_0) \right]$ - corresponding to the amount by which $\widehat{f}$ would change when estimated using a different training set, different training sets resulting in different $\widehat{f}$. Ideally, the estimate for $f$ should not vary too much between training sets.
+
+The expected test MSE writes
+
+$$
+\mathbb{E} \left[ \left( y_0 - \widehat{f} (x_0) \right)^2 \right]
+=
+\mathbb{E} \left[ y_0^2 \right]
+- 
+2 \mathbb{E} \left[ y_0 \widehat{f} (x_0) \right]
++ 
+\mathbb{E} \left[ \widehat{f}^2 (x_0) \right]
+$$
+
+Using the assumption of the underlying linear model, the first term of the expected test MSE writes
+
+$$
+\begin{align}
+\mathbb{E} \left[ y_0^2 \right]
+=
+\mathbb{E} \left[ \left( f(x_0) + \epsilon_0 \right)^2 \right]
+=
+\mathbb{E} \left[ f^2(x_0) \right]
++ 
+2 
+\mathbb{E} \left[\epsilon_0 f(x_0) \right]
++ 
+\mathbb{E} \left[ \epsilon_0^2 \right]
+=
+f^2(x_0)
++ 
+\sigma^2
+,
+\end{align}
+$$
+using the fact that $\epsilon_0$ and $\widehat{f}(x_0)$ are independent ( hence $\mathbb{E} \left[\epsilon_0 \widehat{f}(x_0) \right] = \mathbb{E} \left[\epsilon_0 \right] \mathbb{E} \left[ \widehat{f}(x_0) \right]$) and $\mathbb{E} \left[\epsilon_0 \right] = 0$ by assumption.
+
+The second term of the expected test MSE writes
+
+$$
+\mathbb{E} \left[ y_0 \widehat{f} (x_0) \right]
+=
+\mathbb{E} \left[ \left( f(x_0) + \epsilon_0 \right) \widehat{f} (x_0) \right]
+=
+\mathbb{E} \left[ f(x_0) \widehat{f}(x_0) \right]
++ 
+\mathbb{E} \left[ \epsilon_0 \widehat{f}(x_0) \right]
+=
+f(x_0) \mathbb{E} \left[ \widehat{f} (x_0) \right].
+$$
+Lastly, the third term of the expected test MSE writes
+
+$$
+\mathbb{E} \left[ \widehat{f}^2 (x_0)\right]
+=
+\mathbb{V} \left[ \widehat{f} (x_0) \right]
++
+\mathbb{E}^2 \left[ \widehat{f} (x_0) \right]
+$$
+
+
+Plugging back, expected test MSE writes
+
+$$
+\begin{align}
+\mathbb{E} \left[ \left( y_0 - \widehat{f} (x_0) \right)^2 \right]
+&
+=
+\mathbb{E} \left[ y_0^2 \right]
+- 
+2 \mathbb{E} \left[ y_0 \widehat{f} (x_0) \right]
++ 
+\mathbb{E} \left[ \widehat{f}^2 (x_0) \right]
+\\
+&
+=
+f^2(x_0)
++ 
+\sigma^2
+-
+2
+f(x_0) \mathbb{E} \left[ \widehat{f} (x_0) \right]
++
+\mathbb{V} \left[ \widehat{f} (x_0) \right]
++
+\mathbb{E}^2 \left[ \widehat{f} (x_0) \right]
+\\
+&
+=
+\sigma^2
++
+\left(f(x_0) - \mathbb{E} \left[ \widehat{f} (x_0) \right] \right)^2
++
+\mathbb{V} \left[ \widehat{f} (x_0) \right]
+\\
+&
+=
+\sigma^2
++
+\mathbf{Bias}^2 \left( \widehat{f}(x_0) \right)
++
+\mathbb{V} \left[ \widehat{f} (x_0) \right]
+\\
+&
+=
+\text{irreducible error}
++
+\text{squared bias}
++
+\text{variance}
+\end{align}
+$$
+The **overall expected test MSE** (**overall expected prediction error in the MSE sense**) can be computed by averaging the expected test MSE at one test point over all possible values of $x_0$ in the test set.
+
+
+
+
+    
+## Another issue for high-dimensional data
+
+```{r, echo=TRUE}
+library(ElemStatLearn)
+data(prostate)
+str(prostate)
+smallset <- prostate[1:5,]
+lm(lpsa ~ ., data = smallset)
+```
+
+For the case where the number of predictors is greater than the number of data points in the set, some of the coeficients will be `NA` since in this case the design matrix can't be inverted.
+
+## Hard thresholding
+
+* Model: $y_i = f(x_i) + \epsilon_i$
+
+* Assume a linear model $\widehat{f} = \beta^T x$ 
+
+* Constrain only $\lambda$ coefficients to be nonzero.
+
+* Selection problem is after chosing $\lambda$. (can be computationally demanding)
+
+## Regularization for regression
+
+If the $\beta_i$s are unconstrained:
+
+* they can explode
+* susceptible to high variance
+
+To control variance, we might regularize/shrink the coeficients, using a penalized form of the sum of squares.
+
+$$
+\sum_{j = 1}^{n} \left( y_j - \sum_{j = 1}^{m} \beta_{i}x_{ij} \right)^2 + P(\lambda; \beta)
+$$
+Things that are commonly looked for:
+
+* penalty reduces complexity 
+* penalty reduces variance
+* penalty respects structure of the problem
+
+
+## Ridge Regression (Tikhonov regularization)
+
+The ridge regression solves
+
+$$
+\|\boldsymbol{y} - \boldsymbol{X} \boldsymbol{\beta} \|_2^2
++ 
+\lambda \| \boldsymbol{\beta} \|_2^2
+=
+\sum_{j = 1}^{n} \left( y_j - \sum_{j = 1}^{m} \beta_{i}x_{ij} \right)^2 + \lambda \sum_{j=1}^{m} \beta_j^2
+$$
+The penalty term is the $\ell_2$ norm.
+
+It can be shown that this estimator is the solution to the least squares problem subject to the constraint $\| \boldsymbol{\beta} \|^2 = c$:
+
+$$
+\min \|\boldsymbol{y} - \boldsymbol{X} \boldsymbol{\beta} \|_2^2 \quad \text{subject
+to} \quad \| \boldsymbol{\beta} \|_2^2 = c.
+$$
+Inclusion of $\lambda$ may also make the problem non-singlular even if $\boldsymbol{X}^T \boldsymbol{X}$ is non invertible.
+
+### Tuning the $\lambda$ parameter
+
+* $\lambda$ controls the size of the coefficents.
+* $\lambda$ controls the amound of **regularization**.
+* as $\lambda \to 0$ we obtain the least square solution. 
+* as $\lambda \to \inf$ we obtain $\beta_{\lambda = \inf}^{ridge} = 0$ (all coeficients go to zero)
+* setting the $\lambda$ parameter can be done with cross validation or other techniques 
+
+## LASSO (Least Absolute Shrinkage and Selection Operator)
+
+The objective of LASSO is to solve
+
+$$
+\min_{\boldsymbol{\beta}} 
+\|\boldsymbol{y} - \boldsymbol{X} \boldsymbol{\beta} \|_2^2 
+\quad 
+\text{subject to} 
+\quad
+\sum_{i = 1}^{p} | \beta_i | \leq s,
+$$
+
+with the corresponding Lagrangian
+
+$$
+\sum_{i=1}^{N} 
+\left(
+y_i 
+- 
+\beta_0 
++ 
+\sum_{j=1}^{p} 
+x_{ij}
+\beta_j
+\right)^2 
++ 
+\lambda \sum_{j=1}^{p} | \beta_j |,
+$$
+with an analytical solution for orthonormal design matrices $\boldsymbol{X}$.
+
+
+# Combining Predictors (Ensemble methods)
+
+## Key Ideas
+
+* Combining classifiers by averaging/voting.
+* Combining classifiers improves accuracy.
+* Combining classifiers reduces interpretability .
+* Boosting, bagging \& random forests are variants on this theme.
+
+
+## Basic intuition - majority vote
+
+For a number $n$ of *independent* classifiers, $c_i$, $i = 1, \ldots, n$ with an accuracy 
+
+$$
+\mathbb{P}(c_i = 1) = p, \quad i = 1, \ldots, n
+$$, 
+
+the majority vote accuracy is 
+
+$$
+\mathbb{P}
+\left( 
+\boldsymbol{c}, \| \boldsymbol{c} \| 
+\geq
+\lceil n/2 \rceil
+\right)
+=
+1
+-
+\mathbb{P}
+\left( 
+\boldsymbol{c}, \| \boldsymbol{c} \| 
+\leq
+\lfloor n/2 \rfloor
+\right)
+=
+\sum_{k = 0}^{\lfloor n/2 \rfloor}
+{n \choose k}
+p^{n-k}
+(1-p)^{k}
+=
+1 - \text{pbinom}(\lfloor n/2 \rfloor, n, p)
+$$
+For 5 completely independent classifiers ($n = 5$) with the accuracy $70$% (p = 0.7), the majority vote accuracy is $83.7$%:
+$$
+\mathbb{P}
+\left( 
+\boldsymbol{c}, \| \boldsymbol{c} \| 
+\geq
+2.5
+\right)
+=
+1 - \text{pbinom}(\text{floor}(n/2), n, p)
+=
+\text{pbinom}(\text{floor}(n/2), n, p, \text{FALSE})
+=
+0.83692
+,
+$$
+```{r, echo=TRUE, message=F, warning=FALSE}
+p = 0.7
+n = 5
+pbinom(floor(n/2), n, p, FALSE)
+```
+
+For 101 completely independent classifiers, ($n = 101$) with the same accuracy $70$% (p = 0.7), the majority vote accuracy is $99.9$%:
+
+```{r, echo=TRUE, message=F, warning=FALSE}
+p = 0.7
+n = 101
+pbinom(floor(n/2), n, p, FALSE)
+
+```
+
+## Approaches for combining classifers
+
+1. Bagging, boosting, random forests
+    * Usually, combine similar classifiers
+
+2. Combining different classifiers
+    * Model stacking
+    * Model ensembling
+
+## Example with Wage data
+
+```{r, echo=TRUE, message=F, warning=FALSE}
+library(ISLR)
+data(Wage)
+library(ggplot2)
+library(caret)
+
+# Remove the logwage 
+Wage <- subset(Wage, select = -c(logwage))
+
+# Create a building data sset and validation set
+inBuild <- createDataPartition(y = Wage$wage, p = 0.7, list = FALSE)
+
+# Create the validation set
+validation <- Wage[-inBuild, ]
+
+build <- Wage[inBuild, ]
+inTrain <- createDataPartition(y = build$wage, p = 0.7, list = FALSE)
+
+# Create the testing set
+test <- build[-inTrain, ]
+# Create the training set
+train <- build[inTrain, ]
+
+# The validation, testing and training sets and their dimensions
+head(validation); dim(validation)
+head(train); dim(train)
+head(test); dim(test)
+
+```
+
+
+### Build two different models
+
+```{r, echo=TRUE, message=F, warning=FALSE}
+# GLM model
+fitGLM <- train(wage ~., method = 'glm', data = train)
+predGLM <- predict(fitGLM, test)
+errGLM <- predGLM - test$wage
+#sqrt(sum(errGLM^2))
+#length(predGLM)
+qplot(test$wage, predGLM)
+plot(errGLM, type = "l", pch = 17, col = 'blue', xlab = 'testing', ylab = 'error')
+```
+
+```{r, echo=TRUE, message=F, warning=FALSE}
+# RF model
+fitRF <- train(wage ~., method = 'rf', data = train,
+                trControl = trainControl(method = 'cv'), number = 3)
+predRF <- predict(fitRF, test)
+errRF <- predRF - test$wage
+#sqrt(sum(errRF^2))
+#length(predRF)
+qplot(test$wage, predRF)
+plot(errRF, type = "l", pch = 17, col = 'cyan', xlab = 'testing', ylab = 'error')
+```
+
+
+```{r, echo=TRUE, message=F, warning=FALSE}
+qplot(predGLM, predRF, color = wage, data = test)
+```
+
+### Build a model combining the two predictors
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Create the data frame of the two predictions and the wages (from the testing set)
+predDF <- data.frame(predGLM, predRF, wage = test$wage)
+head(predDF); dim(predDF)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Combined model (trained using the testing set)
+fitCOMB <- train(wage ~., method = 'gam', data = predDF)
+predCOMB <- predict(fitCOMB, predDF)
+errCOMB <- predCOMB - test$wage
+#sqrt(sum(errCOMB^2))
+#length(predCOMB)
+qplot(test$wage, predCOMB)
+plot(errCOMB, type = "l", pch = 17, col = 'pink', xlab = 'testing', ylab = 'error')
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Plot comparing the errors corresponding to the three models (GLM,RF,COMB)
+plot(errGLM, type = 'l', pch = 17, col = 'blue', xlab = "testing", ylab = "error")
+lines(errRF, type = 'l', pch = 17, col = 'cyan')
+lines(errCOMB, type = 'l', pch = 17, col = 'pink')
+legend('topright', 
+       legend=c('err1', 'err2', 'err3'),
+       col=c('blue', 'cyan', 'pink'), 
+       lty = 1, cex=0.8)
+```
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+sqrt(sum(errGLM^2))
+sqrt(sum(errRF^2))
+sqrt(sum(errCOMB^2))
+```
+
+### Predict on the validation set
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
+# Prediction over the validation set using the GLM (trained over training)
+predGLMVal <- predict(fitGLM, validation)
+errGLMVal <- predGLMVal - validation$wage
+#sqrt(sum(errGLMVal^2))
+#length(predGLMVal)
+qplot(validation$wage, predGLMVal)
+plot(errGLMVal, type = "l", pch = 17, col = 'blue', xlab = 'validation', ylab = 'error')
+```
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
+# Prediction over the validation set using the RF (trained over training)
+predRFVal <- predict(fitRF, validation)
+errRFVal <- predRFVal - validation$wage
+#sqrt(sum(errRFVal^2))
+#length(predRFVal)
+qplot(validation$wage, predRFVal)
+plot(errRFVal, type = "l", pch = 17, col = 'cyan', xlab = 'validation', ylab = 'error')
+```
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
+# Create the data frame of the two predictions corresponding to the two models.
+predDFVal <- data.frame(predGLM = predGLMVal, 
+                        predRF = predRFVal)
+head(predDFVal, 10); dim(predDFVal)
+```
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
+# Prediction over the validation set using the RF (training over training)
+predCOMBVal <- predict(fitCOMB, predDFVal)
+errCOMBVal <- predCOMBVal - validation$wage
+#sqrt(sum(errCOMBVal^2))
+#length(predCOMBVal)
+qplot(validation$wage, predCOMBVal)
+plot(errCOMBVal, type = "l", pch = 17, col = 'pink', xlab = 'validation', ylab = 'error')
+```
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
+plot(errGLMVal, type = 'l', pch = 17, col = 'blue', xlab = "validation", ylab = "error")
+lines(errRFVal, type = 'l', pch = 17, col = 'cyan')
+lines(errCOMBVal, type = 'l', pch = 17, col = 'pink')
+legend('topright',
+       legend=c('err1', 'err2', 'err3'),
+       col=c('blue', 'cyan', 'pink'),
+       lty = 1, cex=0.8)
+```
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
+sqrt(sum(errGLMVal^2))
+sqrt(sum(errRFVal^2))
+sqrt(sum(errCOMBVal^2))
+```
+
+## Notes
+
+* Even simple blending can be useful
+* Typical model for binary/multiclass data
+    * Build an odd number of models
+    * Predict with each model
+    * Predict the class by majority
+* This can get dramatically more complicated 
+    * Simple bleding in `caret`: `caretEnsemble`
+
+# Forecasting
+
+Typically applied to time series data, which is introducing some very specific types of dependent structure and some additional challenges which should be taken into account when performing prediction.
+
+## What is different?
+
+* Data are dependent over time.
+
+* Specific pattern types:
+    * trends - long term increase or decrease.
+    * seasonal patterns - patterns related to time of week, month, year.
+    * cycles - patterns that riseand fall periodically.
+
+* Subsampling into training/test sets is more complicated.
+* Similar issues arise in spatial data.
+    * Dependency between nearby observations.
+    * Location specific effects.
+
+* Typically, the goal is to predict one or more observations into the futures.
+* All standard predictions can be used.
+
+Thing that should be considered
+    * the "spurious correlations", i.e. sometimes random variables can often be corelated but not causally related (coincidence or the presence of other unseen factors). Those are also common in geographuc analysis.
+    * extrapolation
+
+
+# Unsupervised Prediction
+
+* Sometimes you don't know the labels for predictions
+
+* To build a predictor
+    * Create clusters
+    * Name clusters
+    * Build predictor(s) for clusters
+
+* In a new data set
+    * Predict clusters
+
+## Iris example ignoring species lables
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+data("iris")
+library(ggplot2)
+inTrain <- createDataPartition(y = iris$Species, p = 0.7, list = FALSE)
+train <- iris[inTrain,]
+test <- iris[-inTrain,]
+
+dim(train)
+dim(test)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+kMeans1 <- kmeans(subset(train, select = -c(Species)), centers = 3)
+train$clusters <- as.factor(kMeans1$cluster)
+qplot(Petal.Width, Petal.Length, colour = clusters, data = train)
+```
+
+## Compare to real labels
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+table(kMeans1$cluster, train$clusters)
+```
+
+## Build predictor
+```{r, echo=TRUE, message = FALSE, warning=FALSE}
+fitRPART <- train(clusters ~., data = subset(train, select = -c(Species)), method = 'rpart')
+table(predict(fitRPART, train), train$Species)
+```
+
+## Apply on test
+```{r, echo=TRUE, message = FALSE, warning=FALSE}
+predRPART <- predict(fitRPART, test)
+table(predRPART, test$Species)
+```
+
+
+
+

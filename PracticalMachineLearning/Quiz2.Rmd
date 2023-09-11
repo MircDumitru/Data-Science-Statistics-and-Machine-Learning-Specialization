@@ -1,0 +1,228 @@
+---
+title: "Caret package, tools for creating features & preprocessing"
+subtitle: |
+  | Practical Machine Learning: Quiz 2
+  | Coursera Data Science: Statistics & Machine Learning Specialization
+author: "Mircea Dumitru"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+header-includes:
+   - \usepackage{amsmath}
+   - \usepackage{bm}
+   - \usepackage{eucal}
+output: 
+    html_document:
+        toc: true
+---
+
+<style>
+r { color: Red }
+o { color: Orange }
+g { color: Green }
+</style>
+
+
+
+## Question 1
+
+Load the Alzheimer's disease data using the commands:
+
+```{r, echo=TRUE}
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+```
+
+Which of the following commands will create non-overlapping training and test sets with about 50% of the observations assigned to each? 
+
+## Answer 1
+```{r, echo=TRUE}
+library(caret)
+adData = data.frame(diagnosis,predictors)
+trainIndex = createDataPartition(diagnosis, p = 0.50, list = FALSE)
+training = adData[trainIndex,]
+testing = adData[-trainIndex,]
+dim(adData)
+dim(training)
+dim(testing)
+```
+
+## Question 2
+Load the cement data using the commands:
+
+```{r, echo=TRUE}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(1000)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+```
+
+Make a plot of the outcome (CompressiveStrength) versus the index of the samples. Color by each of the variables in the data set (you may find the cut2() function in the Hmisc package useful for turning continuous covariates into factors). What do you notice in these plots?
+
+## Answer 2
+
+```{r, echo=TRUE, message=FALSE, fig.height = 10, fig.width = 12}
+library(Hmisc)
+library(ggplot2)
+library(ggpubr)
+head(training)
+
+g1 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength), colour = cut2(Cement, g = 3))) + geom_point()
+
+g2 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength), colour = cut2(BlastFurnaceSlag, g = 3))) + geom_point()
+
+g3 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength),  colour = cut2(FlyAsh, g = 3))) + geom_point()
+
+g4 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength), colour = cut2(Water, g = 3))) + geom_point()
+
+g5 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength),  colour = cut2(Superplasticizer, g = 3))) + geom_point()
+
+g6 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength), colour = cut2(CoarseAggregate, g = 3))) + geom_point()
+
+g7 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength), colour = cut2(FineAggregate, g = 3))) + geom_point()
+
+g8 <- ggplot(concrete, aes(CompressiveStrength, 1:length(CompressiveStrength), colour = cut2(Age, g = 3))) + geom_point()
+
+ggarrange(g1, g2, g3, g4, g5, g6, g7, g8,
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H"),
+          ncol = 2, nrow = 4)
+```
+
+**There is a non-random pattern in the plot of the outcome versus index that does not appear to be perfectly explained by any predictor suggesting a variable may be missing.**
+
+
+
+## Question 3
+
+Load the cement data using the commands:
+
+```{r, echo=TRUE}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(1000)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+```
+
+Make a histogram and confirm the SuperPlasticizer variable is skewed. Normally you might use the log transform to try to make the data more symmetric. Why would that be a poor choice for this variable?
+
+## Answer 3
+
+```{r, echo=TRUE}
+summary(concrete$Superplasticizer)
+```
+
+```{r, echo=TRUE, fig.height = 4, fig.width = 12}
+g1 <- ggplot(concrete, aes(x = Superplasticizer)) +
+  geom_histogram(color="red", fill="salmon")
+
+g2 <- ggplot(concrete, aes(x = log(Superplasticizer))) +
+  geom_histogram(color="blue", fill="lightblue")
+
+g3 <- ggplot(concrete, aes(x = log(Superplasticizer+1))) +
+  geom_histogram(color="blue", fill="lightblue")
+
+
+ggarrange(g1, g2, g3,
+          labels = c("A", "B", 'C'),
+          ncol = 3, nrow = 1)
+```
+
+**There are values of zero so when you take the log() transform those values will be -Inf.**
+
+## Question 4
+Load the Alzheimer's disease data using the commands:
+
+```{r, echo=TRUE}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis, predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[inTrain,]
+testing = adData[-inTrain,]
+```
+
+Find all the predictor variables in the training set that begin with IL. Perform principal components on these variables with the preProcess() function from the caret package. Calculate the number of principal components needed to capture 90% of the variance. How many are there?
+
+## Answer 4
+
+```{r, echo=TRUE}
+# Define the training set only based on the predictors variables in the training set that begin with IL via grep 
+trainingIL <- training[,names(training)[grep("^IL", names(training))]]
+# Compute the principal components via prcomp, (with the scaled predictors) for trainingIL.
+PCA <- prcomp(trainingIL, scale. = TRUE)
+# Set the captured variance to the desired threshold
+varThreshold <- 0.9
+# Compute which component has the corresponding cumulative proportion of captured variance above the threshold
+which.max(summary(PCA)$importance['Cumulative Proportion',] > varThreshold)
+
+# Compute the principal components via preProcess, (with method pca) setting the using the defined threshold for the captured variance.
+varThreshold <- 0.9
+PCA <- preProcess(trainingIL, 
+                  method = "pca", 
+                  thresh = varThreshold)
+PCA
+```
+
+## Question 5
+
+Load the Alzheimer's disease data using the commands:
+
+```{r, echo=TRUE}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[inTrain,]
+testing = adData[-inTrain,]
+```
+
+Create a training data set consisting of only the predictors with variable names beginning with IL and the diagnosis. Build two predictive models, one using the predictors as they are and one using PCA with principal components explaining 80% of the variance in the predictors. Use method="glm" in the train function. 
+
+What is the accuracy of each method in the test set? Which is more accurate?
+
+## Answer 5
+
+```{r, echo=TRUE}
+trainingIL <- training[,names(training)[grep("^IL|diagnosis", names(training))]]
+#head(trainingIL)
+testingIL <- testing[,names(testing)[grep("^IL|diagnosis",  names(testing))]]
+#head(testingIL)
+fitAll <- train(diagnosis ~ .,
+                method = 'glm',
+                data = trainingIL)
+confusionMatrix(testingIL$diagnosis, predict(fitAll, testingIL))$overall['Accuracy']
+#----
+preObj <- preProcess(trainingIL[,-1],
+                     method = c('center', 'scale'))
+trainingILS <- predict(preObj, trainingIL[,-1])
+trainingILS <- cbind(trainingIL[,1],trainingILS)
+colnames(trainingILS)[1] <- 'diagnosis'
+testingILS <- predict(preObj, testingIL[,-1])
+testingILS <- cbind(testingIL[,1],testingILS)
+colnames(testingILS)[1] <- 'diagnosis'
+fitAllS <- train(diagnosis ~ .,
+                method = 'glm',
+                data = trainingILS)
+confusionMatrix(testingILS$diagnosis, predict(fitAllS, testingILS))$overall['Accuracy']
+#----
+preProc <- preProcess(trainingIL,
+                      method = 'pca', 
+                      thresh =  0.8)
+trainingILPCA08 <- predict(preProc,
+                           trainingIL)
+#head(trainingILPCA08)
+testingILPCA08 <- predict(preProc,
+                  testingIL)
+fitPCA <- train(diagnosis ~ .,
+                method = 'glm',
+                data = trainingILPCA08)
+confusionMatrix(testingIL$diagnosis, predict(fitPCA, testingILPCA08))$overall['Accuracy']
+```

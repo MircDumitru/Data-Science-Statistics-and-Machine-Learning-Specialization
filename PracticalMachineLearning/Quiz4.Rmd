@@ -1,0 +1,236 @@
+---
+title: "Regularized Regression and Combining Predictors"
+subtitle: |
+  | Practical Machine Learning: Quiz 4
+  | Coursera Data Science: Statistics & Machine Learning Specialization
+author: "Mircea Dumitru"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+header-includes:
+   - \usepackage{amsmath}
+   - \usepackage{bbm}
+   - \usepackage{eucal}
+output: 
+    html_document:
+        toc: true
+---
+\DeclareMathOperator{\sign}{sign}
+
+
+<style>
+r { color: Red }
+o { color: Orange }
+g { color: Green }
+</style>
+
+
+## Question 1. 
+
+Load the vowe.train and vowel.test data sets
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+library(ElemStatLearn)
+data(vowel.train)
+data(vowel.test)
+```
+
+Set the variable y to be a factor variable in both the training and test set. Then set the seed to 33833. Fit
+    * a random forest predictor relating the factor variable $y$ to the remaining variables
+    * a boosted predictor using 'gbm' method.
+Fit these both with the `train()` command in the caret package.
+    
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+library(caret)
+vowel.train$y <- as.factor(vowel.train$y)
+vowel.test$y <- as.factor(vowel.test$y)
+set.seed(33833)
+fitRF <- train(y ~ ., data = vowel.train, method = 'rf')
+predRF <- predict(fitRF, vowel.test)
+tRF <- table(predRF, vowel.test$y)
+```
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+accRF <- sum(diag(tRF))/sum(tRF)
+accRF
+```
+
+```{r, echo=TRUE, messages = FALSE, results='hide', warning = FALSE}
+fitGBM <- train(y ~ ., data = vowel.train, method = 'gbm')
+predGBM <- predict(fitGBM, vowel.test)
+tGBM <- table(predGBM, vowel.test$y)
+```
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+accGBM <- sum(diag(tGBM))/sum(tGBM)
+accGBM
+```
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+predDF <- data.frame(predRF, predGBM, vowel.test$y)
+aggAcc <- sum(predRF[predDF$predRF == predDF$predGBM] == predDF$vowel.test.y[predDF$predRF == predDF$predGBM]) /  sum(predDF$predRF == predDF$predGBM)
+aggAcc    
+```
+
+
+## Question 2.
+
+Load the Alzheimer’s data using the following commands
+
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+library(caret)
+
+library(gbm)
+
+set.seed(3433)
+
+library(AppliedPredictiveModeling)
+
+data(AlzheimerDisease)
+
+adData = data.frame(diagnosis,predictors)
+
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+
+training = adData[ inTrain,]
+
+testing = adData[-inTrain,]
+```
+
+
+Set the seed to 62433 and predict diagnosis with all the other variables using a random forest (“rf”), boosted trees (“gbm”) and linear discriminant analysis (“lda”) model. Stack the predictions together using random forests (“rf”). What is the resulting accuracy on the test set? Is it better or worse than each of the individual predictions?
+
+```{r, echo=TRUE, messages = FALSE, results='hide', warning = FALSE}
+set.seed(62433)
+fitRF <- train(diagnosis ~ ., training, method = 'rf')
+predRF <- predict(fitRF, testing)
+```
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+tRF <- table(predRF, testing$diagnosis)
+accRF <- sum(diag(tRF))/sum(tRF)
+accRF
+```
+
+```{r, echo=TRUE, messages = FALSE, results='hide', warning = FALSE}
+fitGBM <- train(diagnosis ~ ., training, method = 'gbm')
+predGBM <- predict(fitGBM, testing)
+```
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+tGBM <- table(predGBM, testing$diagnosis)
+accGBM <- sum(diag(tGBM))/sum(tGBM)
+accGBM
+```
+
+```{r, echo=TRUE, messages = FALSE, results='hide', warning = FALSE}
+fitLDA <- train(diagnosis ~ ., training, method = 'lda')
+predLDA <- predict(fitLDA, testing)
+```
+
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+tLDA <- table(predLDA, testing$diagnosis)
+accLDA <- sum(diag(tLDA))/sum(tLDA)
+accLDA
+```
+
+```{r, echo=TRUE, messages = FALSE, results='hide', warning = FALSE}
+predDF <- data.frame(predRF, predGBM, predLDA, diagnosis = testing$diagnosis)
+fitCOMB <- train(diagnosis ~ ., predDF, method = 'rf')
+predCOMB <- predict(fitCOMB, testing)
+```
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+tCOMB <- table(predCOMB, testing$diagnosis)
+accCOMB <- sum(diag(tCOMB))/sum(tCOMB)
+accCOMB
+```    
+
+
+## Question 3.
+
+Load the concrete data with the commands:
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+set.seed(3523)
+
+library(AppliedPredictiveModeling)
+
+data(concrete)
+
+inTrain = createDataPartition(concrete$CompressiveStrength, p = 3/4)[[1]]
+
+training = concrete[ inTrain,]
+
+testing = concrete[-inTrain,]
+```
+
+
+Set the seed to 233 and fit a lasso model to predict Compressive Strength. Which variable is the last coefficient to be set to zero as the penalty increases? (Hint: it may be useful to look up ?plot.enet).
+
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+set.seed(233)
+library(elasticnet)
+fitLASSO <- train(CompressiveStrength ~ ., training, method = 'lasso')
+plot.enet(fitLASSO$finalModel, xvar = "penalty", use.color = TRUE)
+```
+
+
+## Question 4.
+
+
+Load the data on the number of visitors to the instructors blog from here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/gaData.csv
+
+Using the commands:
+
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+library(lubridate) # For year() function below
+
+dat = read.csv("gaData.csv")
+
+training = dat[year(dat$date) < 2012,]
+
+testing = dat[(year(dat$date)) > 2011,]
+
+tstrain = ts(training$visitsTumblr)
+```
+
+Fit a model using the `bats()` function in the forecast package to the training time series. Then forecast this model for the remaining time points. For how many of the testing points is the true value within the 95% prediction interval bounds?
+
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+library(forecast)
+fitBATS <- bats(tstrain)
+forcastBATS <- forecast(fitBATS, level = 95, h = dim(testing)[1])
+sum(forcastBATS$lower < testing$visitsTumblr & testing$visitsTumblr < forcastBATS$upper) / 
+    dim(testing)[1]
+```
+
+
+
+## Question 5.
+
+Load the concrete data with the commands:
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+set.seed(3523)
+library(AppliedPredictiveModeling)
+data(concrete)
+inTrain = createDataPartition(concrete$CompressiveStrength, p = 3/4)[[1]]
+training = concrete[inTrain, ]
+testing = concrete[-inTrain, ]
+```
+
+Set the seed to 325 and fit a support vector machine using the `e1071` package to predict CompressiveStrength using the default settings. Predict on the testing set. What is the RMSE?
+
+```{r, echo=TRUE, messages = FALSE, warning = FALSE}
+set.seed(325)
+library(e1071)
+fitSVM <- svm(CompressiveStrength ~ ., training)
+predSVM <- predict(fitSVM, testing)
+accuracy(predSVM, testing$CompressiveStrength)[2]
+```

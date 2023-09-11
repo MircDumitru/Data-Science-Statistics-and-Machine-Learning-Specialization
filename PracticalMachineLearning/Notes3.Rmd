@@ -1,0 +1,741 @@
+---
+title: "Predicting with trees, Random Forests, & Model Based Predictions"
+subtitle: |
+  | Practical Machine Learning: Week 3
+  | Coursera Data Science: Statistics & Machine Learning Specialization
+author: "Mircea Dumitru"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+header-includes:
+   - \usepackage{amsmath}
+   - \usepackage{bbm}
+   - \usepackage{eucal}
+output: 
+    html_document:
+        toc: true
+---
+\DeclareMathOperator{\sign}{sign}
+
+
+<style>
+r { color: Red }
+o { color: Orange }
+g { color: Green }
+</style>
+
+
+# Predicting with trees
+
+## Key ideas
+
+* Iteratively split variables into groups.
+* Evaluate *homogeneity* within each group.
+* Split again if necessary.
+
+**Pros**
+
+* Easy to interpret.
+* Better performances in non-linear settings.
+
+**Cons**
+
+* Without prunning/cross-validation can lead to overfitting.
+* Harder to estimate uncertainty.
+* Results may be variable, depending the exact values of the parameters or the collected variables.
+
+## Basic algorithm
+
+1. Start with all variables in one group
+2. Find the variable/split that best separates the outcome
+3. Divide the data into two groups (*leaves*) on that split (*node*)
+4. Within each split, find the best variable/split that separates the outcomes
+5. Continue until the groups are too small or sufficiently *pure*
+
+## Measures of impurity
+
+Multiple measures of impurity, most of which are based on the probability
+
+$$
+\widehat{p}_{mk}
+=
+\frac{1}{N_m}
+\sum_{x_i \in \text{Leaf}_m}
+\mathbb{1}\left( y_i = k \right)
+$$
+where $m$ represents the group (the leaf), $N_m$ the number of variables (objects) and $k$ represents a class. 
+
+**Misclassification Error**:
+
+$$
+1 - \widehat{p}_{mk(m)},
+\quad
+k(m) - \text{most common k}
+$$
+
+* 0 - perfect purity
+* 0.5 - no purity
+
+**Gini Index**:
+
+
+For a set of items with $J$ classes and relative frequencies $p_i$, $i \in \{ 1, 2, \ldots, J \}$, the probability of choosing an item with label $i$ is $p_{i}$, and the probability of miscategorizing that item is $\sum_{k \neq i} p_{k} = 1 - p_{i}$. The Gini impurity is computed by summing pairwise products of these probabilities for each class label:
+
+$$
+I_{G}(p)
+=
+\sum_{i}^{J}
+p_{i}
+\left(
+\sum_{k \neq i}
+p_{k}
+\right)
+=
+\sum_{i}^{J}
+p_{i}
+\left(
+1 - p_{i}
+\right)
+=
+1
+-
+\sum_{k=1}^{J}
+p_i^2
+$$
+
+* 0 - perfect purity
+* 0.5 - no purity
+
+**Deviance/information gain**:
+
+The information gain $\operatorname{I}_{E} \left( p_{1}, p_{2}, \ldots, p_{J} \right)$ is based on the entropy:
+$$
+\operatorname{I}_{E}
+\left(
+p_{1},
+\ldots,
+p_{J}
+\right)
+=
+-\sum_{i=1}^{J}
+p_{i} \log_{2} p_{i}
+$$
+where $p_{1}, \ldots, p_{J}$ are fractions that add up to 1 and represent the percentage of each class present in the child node that results from a split in the tree.
+
+* 0 - perfect purity
+* 1 - no purity
+
+```{r, echo=TRUE, fig.width=12, fig.height=4}
+par(mfrow = c(1,2))
+x <- rep(c(1,2,3,4), each = 4)
+y <- rep(c(1,2,3,4), 4)
+plot(x, y, 
+     pch = 19, cex = 2, col = 'blue',
+     xlab='', ylab = '',
+     xaxt = "n", yaxt = "n")
+points(x[length(x)], y[length(y)], pch = 19, cex = 2, col = 'red')
+
+plot(x, y, 
+     pch = 19, cex = 2, col = 'blue',
+     xlab='', ylab = '',
+     xaxt = "n", yaxt = "n")
+points(x[length(x)/2+1:length(x)], y[length(y)/2+1:length(y)], pch = 19, cex = 2, col = 'red')
+```
+
+
+\begin{equation*}
+\begin{aligned}[c]
+\text{Misclassification: } 
+1 - 15/16 = 1/16 \approx 0.06
+\\
+\text{Gini: } 
+1 - \left[ \left(\frac{1}{16}\right)^2 + \left(\frac{15}{16}\right)^2 \right] = 1 - \frac{226}{256} = \frac{30}{256} \approx 0.12
+\\
+\text{Information: } 
+ -\left[ \frac{1}{16} \log_2\left( \frac{1}{16} \right) + \frac{15}{16}\log_2\left(\frac{15}{16}\right) \right] \approx 0.34
+\end{aligned}
+\qquad\qquad
+\begin{aligned}[c]
+\text{Misclassification: } 
+1 - 8/16 = 8/16 = 0.5
+\\
+\text{Gini: } 
+1 - \left[ \left(\frac{1}{2}\right)^2 + \left(\frac{1}{2}\right)^2 \right] = 1 - \frac{1}{2} = 0.5
+\\
+\text{Information: } 
+ -\left[ 2 \frac{1}{2} \log_2\left( \frac{1}{2} \right) \right] = 1
+\end{aligned}
+\end{equation*}
+
+
+
+
+## Example Iris Data
+
+```{r, echo=TRUE}
+data(iris)
+library(ggplot2)
+names(iris)
+table(iris$Species)
+```
+
+```{r, echo=TRUE, message=FALSE}
+library(caret)
+inTrain <- createDataPartition(y = iris$Species,
+                               p = 0.7,
+                               list = FALSE)
+training <- iris[inTrain,]
+testing <- iris[-inTrain,]
+dim(training)
+dim(testing)
+```
+
+```{r,echo=TRUE, message=FALSE}
+library(ggplot2)
+g <- ggplot(data = training, 
+      aes(x = Petal.Width, y = Sepal.Width,
+          colour = Species))
+g <- g + geom_point()
+g
+```
+
+```{r, echo=TRUE}
+modFit <- train(Species ~ .,
+                method = 'rpart',
+                data  = training)
+print(modFit$finalModel)
+```
+
+```{r, echo=TRUE}
+plot(modFit$finalModel, uniform = TRUE,
+     main = 'Classification Tree')
+text(modFit$finalModel,
+     use.n = T,
+     all = T,
+     cex = .8)
+```
+
+```{r, echo=TRUE, message=F}
+library(rattle)
+fancyRpartPlot(modFit$finalModel)
+```
+
+```{r, echo=TRUE, message=F}
+predict(modFit, newdata = testing)
+```
+
+```{r, echo=TRUE, message=F}
+confusionMatrix(factor(testing$Species), 
+                factor(predict(modFit, newdata = testing)))
+```
+
+## Notes
+
+* Classifcation trees are non-linear models
+    * They use interactions between variables
+    * Data transformations may be less important (monotone transformations)
+    * Trees can alos be used for regression problems (continous outcome)
+
+* Note that there are multiple tree building options in `R` both
+    * in the `caret` package 
+        * party, rpart 
+    * out of the `caret` package
+        * tree
+
+
+# Bootstrap aggregating (Bagging)
+
+Basic idea:
+    1. Resample cases and recalculate predictions
+    2. Average or majority vote
+    
+Notes:
+    * Similar bias (as fitting any of the individual models)
+    * Reduced variance
+    * More useful for non-linear functions
+
+
+## Ozone data
+
+```{r, echo=TRUE}
+library(ElemStatLearn)
+data(ozone, package = 'ElemStatLearn')
+
+ozone <- ozone[order(ozone$ozone),]
+head(ozone)
+```
+
+### Bagged loess
+
+```{r, echo=TRUE}
+ll <- matrix(NA, nrow = 10, ncol = 155)
+for(i in 1 : 10){
+    ss <- sample(1:dim(ozone)[1], replace = T)
+    ozone0 <- ozone[ss,]
+    ozone0 <- ozone0[order(ozone0$ozone),]
+    loess0 <- loess(temperature ~ ozone,
+                    data = ozone0, span = 0.2)
+    ll[i,] <- predict(loess0,
+                      newdata = data.frame(ozone=1:155))
+}
+```
+
+```{r, echo=TRUE, fig.width=8, fig.height=6}
+plot(ozone$ozone, ozone$temperature, pch = 19, cex = 0.5)
+for(i in 1:10){
+    lines(1:155, ll[i,], 
+          col = 'grey', lwd = 2)
+}
+lines(1:155, apply(ll, 2, mean), col = 'red', lwd = 2)
+```
+
+### Bagging in caret
+
+* Some models perform bagging for you, in `train` function consider method options
+    * `bagEarth`
+    * `treebag`
+    * `bagFDA`    
+* Alternatively, you can bag any model you choose using the `bag` function.
+
+
+```{r, echo=TRUE}
+predictors = data.frame(ozone=ozone$ozone)
+temperature = ozone$temperature
+treebag <- bag(predictors, temperature, B = 10,
+               bagControl = bagControl(fit = ctreeBag$fit, 
+                                       predict = ctreeBag$pred,
+                                       aggregate = ctreeBag$aggregate))
+```
+
+```{r, echo=TRUE}
+plot(ozone$ozone, 
+     temperature, 
+     col = 'lightgrey', pch = 19)
+points(ozone$ozone,
+       predict(treebag$fits[[1]]$fit,predictors),
+       pch = 19, col = 'red')
+points(ozone$ozone,
+       predict(treebag, predictors),
+       pch = 19, col = 'blue')
+```
+
+
+### Parts of bagging
+
+```{r, echo=TRUE}
+ctreeBag$fit
+```
+
+```{r, echo=TRUE}
+ctreeBag$pred
+```
+
+```{r, echo=TRUE}
+ctreeBag$aggregate
+```
+
+## Notes
+
+* Bagging is most useful for nonlinear models.
+* Often used with trees - an extension is random forests.
+* Several models use bagging in caret's `train` function.
+
+# Random Forests
+
+1. Bootstrap samples.
+2. At each split, bootstrap variables.
+3. Grow multiple trees and vote.
+
+**Pros**
+1. Accuracy.
+
+**Cons**
+1. Speed.
+2. Interpretability.
+3. Overfitting.
+
+
+## Iris data
+
+
+```{r, echo=TRUE}
+data(iris)
+library(ggplot2)
+inTrain <- createDataPartition(y = iris$Species,
+                               p = 0.7, list = FALSE)
+training <- iris[inTrain,]
+testing <- iris[-inTrain,]
+```
+
+
+```{r, echo=TRUE, message=FALSE}
+library(randomForest)
+modFit <- train(Species ~ .,
+                data = training,
+                method = 'rf',
+                prox = TRUE)
+modFit
+```
+
+## Getting a single tree
+
+```{r, echo=TRUE}
+getTree(modFit$finalModel, k = 2, labelVar=FALSE)
+```
+
+## Class "centers"
+
+```{r, echo=TRUE}
+irisP <- classCenter(training[,c(3,4)],
+                     training$Species, modFit$finalModel$prox)
+irisP <- as.data.frame(irisP)
+irisP$Species <- rownames(irisP)
+g <- ggplot(data = training,
+            aes(x = Petal.Width,
+                y = Petal.Length,
+                col = Species))
+g <- g + geom_point()
+g <- g + geom_point(data = irisP,
+                    aes(x = Petal.Width,
+                        y = Petal.Length,
+                        col = Species), size = 5, shape = 4)
+g
+```
+
+## Predicting new values
+
+```{r, echo=TRUE}
+pred <- predict(modFit, testing)
+table(pred, testing$Species)
+```
+
+
+```{r,echo=TRUE}
+testing$predRight <- pred == testing$Species
+g <- ggplot(data = testing,
+            aes(x = Petal.Width,
+                y = Petal.Length, 
+                col = predRight),
+       main = 'newdata Predictions')
+g <- g + geom_point()
+g
+```
+
+
+## Notes
+
+* Random Forests are usually one of the two top performing algorithms along with boosting in prediction contests.
+* Random Forests are difficult to interpret but often very accurate.
+* Care should be taken to avoid overfitting.
+
+# Boosting
+
+1. Take lots of (possible weak) predictors.
+2. Weight them and add them up.
+3. Get a stronger predictor.
+
+## Basic idea behind boosting
+
+1. Start with a set of classifiers $h_1, \ldots, h_k$.
+    * Examples: all possible trees, all possible regression models, all possible cutoffs.
+
+2. Create a classifier that combines classification functions:
+\begin{align}
+f(x)
+=
+\sign
+\left(
+\sum_{t = 1}^{T}
+\alpha_t
+h_t(x)
+\right)
+\end{align}
+
+* Goal is to minimize error (on the training set).
+* Iterative, select one $h$ at each step.
+* Calculate weights based on errors.
+* Upweight missed classifications and select next $h$.
+
+## Example
+
+```{r, echo=TRUE}
+n <- 10
+x <- runif(n)
+y <- runif(n)
+cls <- rep(0, n)
+cls[sample(1:n,5,replace = FALSE)] <- 1
+cls <- factor(cls)
+df <- data.frame(x = x, y = y, cls = cls)
+g <- ggplot(data = df, aes(x = x, y = y, col = cls, shape = cls, fill = cls))
+g <- g + geom_point(size = 5) + labs(x = '') + labs(y = '')
+g
+```
+
+
+The objective is to separate the light blue triangles from the light red circles, with two variables available (one variable corresponding to the $x$ axis, the second one corresponding to the $y$ axis).
+
+## Boosting in R
+
+* Boosting can be used with any subset of classifiers.
+* One large subscale is gradient boosting.
+* R has multiple boosting libraries. Differences include the choice of basic classification functions and combination rules.
+
+    * `gbm` - boosting with trees.
+    * `mboos` - model based boosting.
+    * `ada` - statistical boosting based on additive logistic regression.
+    * `gamBoost` - for boosting generalized additive models.
+
+* Most of these are availabe in the `caret` package.
+
+## Wage example
+
+```{r, echo=TRUE}
+library(ISLR)
+data(Wage)
+Wage <- subset(Wage, select = -c(logwage))
+inTrain <- createDataPartition(y = Wage$wage,
+                               p = 0.7,
+                               list = FALSE)
+training <- Wage[inTrain,]
+testing <- Wage[-inTrain,]
+```
+
+```{r, echo=TRUE, warning=FALSE}
+library(gbm)
+modFit <- train(wage ~ .,
+                method = 'gbm',
+                data = training,
+                verbose = FALSE)
+print(modFit)
+```
+
+```{r, echo=TRUE}
+testing$wagePred <- predict(modFit, testing)
+g <- ggplot(data = testing,aes(x = wagePred,
+                               y = wage))
+g <- g + geom_point()
+g
+```
+
+## Model based predictions
+
+## Basic idea
+
+1. Assume the data follow a probabilistic model.
+2. Use Bayes' theorem to identify optimal classifiers.
+
+**Pros**
+
+* Can take advantage of structure of the data.
+* May be computationally convenient.
+* Are reasonably accurate on real problems.
+
+**Cons**
+
+* Make additional assumptions about the data.
+* When the model is incorrect, you may get reduced accuracy.
+
+
+## Model based approach
+
+1. The goal is to build parameteric model for conditional distribution 
+\begin{align}
+\text{Pr} \left( Y = k \mid X = x \right)
+.
+\end{align}
+
+2. A typical approach is to apply Bayes theorem:
+
+\begin{align}
+\text{Pr} \left( Y = k \mid X = x \right)
+=
+\frac
+{\text{Pr} \left( X = x \mid Y = k \right) 
+\text{Pr} \left(Y = k \right)}
+{\sum_{i}^{K} 
+\text{Pr}\left(X = x \mid Y = i \right)
+\text{Pr} \left(Y = i \right)}
+=
+\frac
+{f_k(x) \pi_k}
+{\sum_{i}^{K} f_i(x) \pi_i}
+.
+\end{align}
+
+3. Typically prior probabilities $\pi_i$, $i = 1, \ldots, K$ are set in advance.
+
+4. One choice for the likelihoods is the Gaussian distribution
+\begin{align}
+f_i(x) 
+=
+\text{Normal}\left( x \mid \mu_i, \sigma_i^2 \right)
+=
+\frac{1}{\sigma_i \sqrt{2\pi}}
+\exp{
+\left(
+-\frac{\left(x - \mu_i\right)^2}{\sigma_i^2}
+\right)
+}
+.
+\end{align}
+
+
+5. Estimate the parameters $\left(\mu_i, \sigma^2_i \right)$ $i = 1, \ldots, K$.
+
+6. Classify to the class with the highest value of 
+\begin{align}
+\text{Pr} \left( Y = k \mid X = x \right)
+.
+\end{align}
+
+
+## Classigying using the model
+
+A range of models use this approach
+
+* Linear discriminant analysis (LDA) assumes $f_k(x)$ is multivarate Gaussian with *same* covariances.
+* Quadratic discriminant analysis (QDA) assumes $f_k(x)$ is multivarate Gaussian with *different* covariances.
+* Model based prediction assumes more complicated versions for the covariance matrix.
+* Naive Bayes assumes independence between features for model building.
+
+## Why linear discriminant analysis?
+
+Considering the log ratio of the probabilities of two classes, $k$ and $j$ then
+
+\begin{align}
+\log
+\left(
+\frac
+{\text{Pr} \left( Y = k \mid X = x \right)}
+{\text{Pr} \left( Y = j \mid X = x \right)}
+\right)
+=
+\log
+\frac
+{f_k(x) \pi_k}
+{f_j(x) \pi_j}
+=
+\log
+\frac
+{\pi_k}
+{\pi_j}
+-
+\frac{1}{2}
+\left( \mu_k + \mu_j \right)^{T}
+\Sigma^{-1}
+\left( \mu_k + \mu_j \right)
++
+x^T
+\Sigma^{-1}
+\left( \mu_k + \mu_j \right)
+\end{align}
+
+
+## Discriminant function
+
+\begin{align}
+\delta_k(x)
+=
+\log \pi_k
+-
+\frac{1}{2}
+\mu_k^{T}
+\Sigma^{-1}
+\mu_k
++
+x^T \Sigma^{-1} \mu_k
+\end{align}
+
+* Decide on class based on 
+
+\begin{align}
+Y(x) = \arg\max_{k} \delta_k(x)
+\end{align}
+
+* One way to estimate parameters is via maximum likelihood (ML).
+
+## Naive Bayes
+
+Suppose we have many predictors, we would want to model $\text{Pr} \left(Y = k \mid X_1, \ldots, X_m \right)$
+
+\begin{align}
+\text{Pr} 
+\left(Y = k \mid X_1, \ldots, X_m \right)
+=
+\frac
+{\pi_k \text{Pr} 
+\left(X_1, \ldots, X_m \mid Y = k \right)}
+{\sum_{i=1}^{K}
+\pi_i \text{Pr} 
+\left(X_1, \ldots, X_m \mid Y = i \right)}
+\end{align}
+
+The likelihood is
+\begin{align}
+\text{Pr} \left(X_1, \ldots, X_m \mid Y = k \right)
+=
+\pi_k
+\text{Pr} \left(X_1 \mid Y = k \right)
+\text{Pr} \left(X_2 \mid X_1, Y = k \right)
+\ldots
+\text{Pr} \left(X_m \mid X_1, \ldots, X_{m-1}, Y = k \right)
+\end{align}
+
+Naive Bayes makes (naive) the assumption that the predictor variables are mutually independent, in which case 
+\begin{align}
+\text{Pr} 
+\left(X_i \mid X_1, \ldots, X_{i-1}, Y = k \right)
+=
+\left(X_i \mid Y = k \right)
+,
+\quad
+i = 2, \ldots, m.
+\end{align}
+
+so the likelihood then writes
+\begin{align}
+\text{Pr} \left(X_1, \ldots, X_m \mid Y = k \right)
+=
+\pi_k
+\text{Pr} \left(X_1 \mid Y = k \right)
+\text{Pr} \left(X_2 \mid Y = k \right)
+\ldots
+\text{Pr} \left(X_m \mid Y = k \right)
+\end{align}
+
+
+## Example Iris Data
+
+```{r, echo=TRUE}
+data(iris)
+library(ggplot2)
+names(iris)
+table(iris$Species)
+```
+
+```{r, echo=TRUE}
+inTrain <- createDataPartition(y = iris$Species,
+                               p = 0.7,
+                               list = FALSE)
+training <- iris[inTrain,]
+testing <- iris[-inTrain,]
+dim(training)
+dim(testing)
+```
+
+```{r, echo=TRUE}
+modLDA <- train(Species ~ .,
+                data = training, 
+                method = 'lda')
+predLDA <- predict(modLDA, testing)
+table(testing$Species, predLDA)
+
+library(klaR)
+modNB <- train(Species ~ .,
+                data = training, 
+                method = 'nb')
+predNB <- predict(modNB, testing)
+table(testing$Species, predNB)
+
+table(predLDA, predNB)
+```
+
+
