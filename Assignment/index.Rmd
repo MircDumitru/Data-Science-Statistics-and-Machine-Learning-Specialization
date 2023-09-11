@@ -1,0 +1,179 @@
+---
+title: "Regularized Regression and Combining Predictors"
+subtitle: |
+  | Practical Machine Learning: Assignment
+  | Coursera Data Science: Statistics & Machine Learning Specialization
+author: "Mircea Dumitru"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+header-includes:
+   - \usepackage{amsmath}
+   - \usepackage{bbm}
+   - \usepackage{eucal}
+output: 
+    html_document:
+        toc: true
+---
+\DeclareMathOperator{\sign}{sign}
+
+
+<style>
+r { color: Red }
+o { color: Orange }
+g { color: Green }
+</style>
+
+
+## What you should submit
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+
+## Background
+
+Using devices such as _Jawbone Up_, _Nike FuelBand_, and _Fitbit_ it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here:
+
+http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har 
+
+(see the section on the Weight Lifting Exercise Dataset).
+
+
+## Data 
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: 
+
+http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har.
+
+If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+## Data Reading
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(caret)
+library(ggplot2)
+# The train & test sets urls
+trainUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"   
+testUrl <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv" 
+# Reading the data via the urls
+trainingRaw = read.csv(url(trainUrl))  
+# head(trainingRaw)
+testingRaw = read.csv(url(testUrl))  
+print(paste('Training set dimension:', dim(trainingRaw)[1], dim(trainingRaw)[2]))
+print(paste('Testing set dimension:', dim(testingRaw)[1], dim(testingRaw)[2]))
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+table(trainingRaw$classe)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+trainingClassePlot <- ggplot(trainingRaw, aes(x = classe, fill = classe)) 
+trainingClassePlot <- trainingClassePlot + ggtitle("Response variable distribution in training set") + xlab("classe") + ylab("classe counts")
+trainingClassePlot <- trainingClassePlot + geom_bar() + geom_text(stat='count', aes(label=..count..), vjust=+.1)
+trainingClassePlot <- trainingClassePlot + theme(legend.position = "none")
+trainingClassePlot
+```
+
+
+## Feature Selection
+
+Removing the columns with corrupted imputs over a threshold.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# compute the number of inputs (rows) that are nan, '' or #DIV/0! per each column
+countCorruptedInputs <- sapply(trainingRaw, function(x) sum(is.na(x) | x == '' | x == '#DIV/0!'))
+# set the threshold as a proportion of number of data 
+# if threshold is reached, the column is eliminated
+threshold = 0.5 * dim(trainingRaw)[1]
+# the columns with number of inputs above the threshold are to be removed
+removeColumuns <- countCorruptedInputs > threshold
+
+training <- trainingRaw[!removeColumuns]
+names(training)
+
+test <- testingRaw[!removeColumuns]
+#names(test)
+```
+
+Removing the first seven columns which are not predictors.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# the first seven predictors are removed
+training <- training[,8:ncol(training)]
+head(training,5)
+dim(training)
+
+test <- test[,8:ncol(test)]
+#head(test,5)
+#dim(test)
+```
+
+Removing the near zero variance predictors
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+if(length(nearZeroVar(training)) > 0){
+    training <- training[, -nearZeroVar(training)]
+}
+dim(training)
+
+if(length(nearZeroVar(training)) > 0){
+    test <- test[, -nearZeroVar(training)]
+}
+dim(test)
+
+```
+
+Create the validation & training set
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+set.seed(42)
+parition <- createDataPartition(training$classe, p = 0.8, list = FALSE)
+train <- training[parition, ]
+dim(train)
+validation <- training[-parition, ]
+dim(validation)
+```
+
+Train a random forest model with 10 trees. The model is builed using all the available predictiors in the pre-processed training set, i.e. excluding the non-predictors columns and the predictors with near zero variance. 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(randomForest)
+rfFit <- randomForest(as.factor(classe)~ ., 
+               data = train, 
+               importance = TRUE, 
+               ntrees = 10
+               )
+```
+
+The confusion matrix over the training set
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+predRfFitTrain <- predict(rfFit, train)
+tableRfTrain <- table(as.factor(train$classe), as.factor(predRfFitTrain))
+tableRfTrain
+print(confusionMatrix(tableRfTrain))
+```
+
+The confusion matrix over the validation set
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+predRfFitValidation <- predict(rfFit, validation)
+tableRfValidation <- table(as.factor(validation$classe), as.factor(predRfFitValidation))
+tableRfValidation
+print(confusionMatrix(tableRfValidation))
+```
+
+
+The confusion matrix over the test set
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+predRfFitTest <- predict(rfFit, test)
+print(predRfFitTest)
+```
